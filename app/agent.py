@@ -17,9 +17,14 @@ def format_docs(docs: List[Document]) -> str:
     """Helper to format retrieved historical threads into a clean text block."""
     if not docs:
         return "No relevant historical resolutions found."
-    return "\n\n---\n\n".join(
-        f"Resolution Snippet:\n{doc.page_content}" for doc in docs
-    )
+    formatted = []
+    for doc in docs:
+        content = f"Historical Customer Issue:\n{doc.page_content}"
+        brand_reply = doc.metadata.get("brand_reply")
+        if brand_reply:
+            content += f"\nAppleSupport Resolution:\n{brand_reply}"
+        formatted.append(content)
+    return "\n\n---\n\n".join(formatted)
 
 
 class PineconeIntegratedRetriever(BaseRetriever):
@@ -83,20 +88,20 @@ class SupportAgent:
         # 3. Prompt template
         self.prompt = ChatPromptTemplate.from_template(
             """Act as an AI customer support agent for the brand '{brand}'.
-Here are historical resolutions from similar past customer issues:
-<historical_resolutions>
-{context}
-</historical_resolutions>
+            Here are historical resolutions from similar past customer issues:
+            <historical_resolutions>
+            {context}
+            </historical_resolutions>
 
-Customer Message: "{message}"
+            Customer Message: "{message}"
 
-Task:
-1. Identify the intent of the message.
-2. Provide a confidence score (0.0 to 1.0) for your intent classification.
-3. Draft a polite reply grounded in the historical resolutions above.
-4. Decide whether the message can be auto-handled (True) or requires human escalation (False).
-5. If auto_handled is False, provide a clear escalation_reason.
-"""
+            Task:
+            1. Identify the intent of the message.
+            2. Provide a confidence score (0.0 to 1.0) for your intent classification.
+            3. Draft a polite reply grounded in the historical resolutions above.
+            4. Decide whether the message can be auto-handled (True) or requires human escalation (False).
+            5. If auto_handled is False, provide a clear escalation_reason.
+            """
         )
 
     async def process_message(self, request: CustomerMessageRequest) -> AgentResponse:
